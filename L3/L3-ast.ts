@@ -176,9 +176,9 @@ export const parseL3SpecialForm = (op: Sexp, params: Sexp[]): Result<CExp> =>
                     isNonEmptyList<Sexp>(params) ? parseLetExp(first(params), rest(params)) :
                         makeFailure(`Bad let: ${params}`) :
                     op === "class" ?
-                        isNonEmptyList<Sexp>(params) && isNonEmptyList<Sexp>(rest(params)) ?
-                            parseClassExp(first(params), second(params)) :
-                            makeFailure(`Bad class: ${params}`) :
+                        params.length === 2 ?
+                            parseClassExp(params[0], params[1]) :
+                            makeFailure(`Bad class Format: exactly 2 arguments required, but we got ${params.length}`) :
                         op === "quote" ?
                             isNonEmptyList<Sexp>(params) ? parseLitExp(first(params)) :
                                 makeFailure(`Bad quote exp: ${params}`) :
@@ -218,7 +218,7 @@ export const parseClassExp = (fields: Sexp, methods: Sexp): Result<ClassExp> =>
     (!isArray(fields) || fields.length === 0 || !allT(isString, fields)) ?
         makeFailure(`invalid fields for class exp: ${format(fields)}`) :
         !isGoodBindings(methods) || methods.length === 0 ?
-            makeFailure(`invakid nethods in "class" expression : ${format(methods)}`) :
+            makeFailure(`invalid methods in "class" expression : ${format(methods)}`) :
             mapv(mapResult(parseL3CExp, map(second, methods)), (methodsExp: CExp[]) =>
                 makeClassExp(map(makeVarDecl, fields), zipWith(makeBinding, map((b: [string, Sexp]) => b[0], methods), methodsExp)));
 
@@ -327,6 +327,7 @@ const unparseLetExp = (le: LetExp): string =>
 
 const unparseClassExp = (ce: ClassExp): string =>
     `(class (${map((f: VarDecl) => f.var, ce.fields).join(" ")}) (${map((b: Binding) => `(${b.var.var} ${unparseL3(b.val)})`, ce.methods).join(" ")}) )`;
+
 export const unparseL3 = (exp: Program | Exp): string =>
     isBoolExp(exp) ? valueToString(exp.val) :
         isNumExp(exp) ? valueToString(exp.val) :
