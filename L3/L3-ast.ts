@@ -325,6 +325,8 @@ const unparseProcExp = (pe: ProcExp): string =>
 const unparseLetExp = (le: LetExp): string =>
     `(let (${map((b: Binding) => `(${b.var.var} ${unparseL3(b.val)})`, le.bindings).join(" ")}) ${unparseLExps(le.body)})`
 
+const unparseClassExp = (ce: ClassExp): string =>
+    `(class (${map((f: VarDecl) => f.var, ce.fields).join(" ")}) (${map((b: Binding) => `(${b.var.var} ${unparseL3(b.val)})`, ce.methods).join(" ")}) )`;
 export const unparseL3 = (exp: Program | Exp): string =>
     isBoolExp(exp) ? valueToString(exp.val) :
         isNumExp(exp) ? valueToString(exp.val) :
@@ -336,6 +338,7 @@ export const unparseL3 = (exp: Program | Exp): string =>
                                 isAppExp(exp) ? `(${unparseL3(exp.rator)} ${unparseLExps(exp.rands)})` :
                                     isPrimOp(exp) ? exp.op :
                                         isLetExp(exp) ? unparseLetExp(exp) :
-                                            isDefineExp(exp) ? `(define ${exp.var.var} ${unparseL3(exp.val)})` :
-                                                isProgram(exp) ? `(L3 ${unparseLExps(exp.exps)})` :
-                                                    exp;
+                                            isClassExp(exp) ? unparseClassExp(exp) :
+                                                isDefineExp(exp) ? `(define ${exp.var.var} ${unparseL3(exp.val)})` :
+                                                    isProgram(exp) ? `(L3 ${unparseLExps(exp.exps)})` :
+                                                        exp;
