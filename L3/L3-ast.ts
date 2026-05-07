@@ -326,7 +326,7 @@ const unparseLetExp = (le: LetExp): string =>
     `(let (${map((b: Binding) => `(${b.var.var} ${unparseL3(b.val)})`, le.bindings).join(" ")}) ${unparseLExps(le.body)})`
 
 const unparseClassExp = (ce: ClassExp): string =>
-    `(class (${map((f: VarDecl) => f.var, ce.fields).join(" ")}) (${map((b: Binding) => `(${b.var.var} ${unparseL3(b.val)})`, ce.methods).join(" ")}) )`;
+    `(class (${map((f: VarDecl) => f.var, ce.fields).join(" ")}) (${map((b: Binding) => `(${b.var.var} ${unparseL3(b.val)})`, ce.methods).join(" ")}))`;
 
 export const unparseL3 = (exp: Program | Exp): string =>
     isBoolExp(exp) ? valueToString(exp.val) :
