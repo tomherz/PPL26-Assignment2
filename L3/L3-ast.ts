@@ -48,8 +48,8 @@ import { Sexp, Token } from "s-expression";
 
 export type Exp = DefineExp | CExp;
 export type AtomicExp = NumExp | BoolExp | StrExp | PrimOp | VarRef;
-export type CompoundExp = AppExp | IfExp | ProcExp | LetExp | LitExp;
-export type CExp = AtomicExp | CompoundExp | ClassExp;
+export type CompoundExp = AppExp | IfExp | ProcExp | LetExp | LitExp | ClassExp;
+export type CExp = AtomicExp | CompoundExp;
 
 export type Program = { tag: "Program"; exps: Exp[]; }
 export type DefineExp = { tag: "DefineExp"; var: VarDecl; val: CExp; }
@@ -127,7 +127,7 @@ export const isAtomicExp = (x: any): x is AtomicExp =>
     isNumExp(x) || isBoolExp(x) || isStrExp(x) ||
     isPrimOp(x) || isVarRef(x);
 export const isCompoundExp = (x: any): x is CompoundExp =>
-    isAppExp(x) || isIfExp(x) || isProcExp(x) || isLitExp(x) || isLetExp(x);
+    isAppExp(x) || isIfExp(x) || isProcExp(x) || isLitExp(x) || isLetExp(x) || isClassExp(x);
 export const isCExp = (x: any): x is CExp =>
     isAtomicExp(x) || isCompoundExp(x);
 
@@ -175,10 +175,14 @@ export const parseL3SpecialForm = (op: Sexp, params: Sexp[]): Result<CExp> =>
                 op === "let" ?
                     isNonEmptyList<Sexp>(params) ? parseLetExp(first(params), rest(params)) :
                         makeFailure(`Bad let: ${params}`) :
-                    op === "quote" ?
-                        isNonEmptyList<Sexp>(params) ? parseLitExp(first(params)) :
-                            makeFailure(`Bad quote exp: ${params}`) :
-                        makeFailure("Never");
+                    op === "class" ?
+                        isNonEmptyList<Sexp>(params) && isNonEmptyList<Sexp>(rest(params)) ?
+                            parseClassExp(first(params), second(params)) :
+                            makeFailure(`Bad class: ${params}`) :
+                        op === "quote" ?
+                            isNonEmptyList<Sexp>(params) ? parseLitExp(first(params)) :
+                                makeFailure(`Bad quote exp: ${params}`) :
+                            makeFailure("Never");
 
 // DefineExp -> (define <varDecl> <CExp>)
 export const parseDefine = (params: List<Sexp>): Result<DefineExp> =>
@@ -209,6 +213,15 @@ export const parseL3Atomic = (token: Token): Result<CExp> =>
                     isString(token) ? makeOk(makeVarRef(token)) :
                         makeOk(makeStrExp(token.toString()));
 
+// Question 2a
+export const parseClassExp = (fields: Sexp, methods: Sexp): Result<ClassExp> =>
+    (!isArray(fields) || fields.length === 0 || !allT(isString, fields)) ?
+        makeFailure(`invalid fields for class exp: ${format(fields)}`) :
+        !isGoodBindings(methods) || methods.length === 0 ?
+            makeFailure(`invakid nethods in "class" expression : ${format(methods)}`) :
+            mapv(mapResult(parseL3CExp, map(second, methods)), (methodsExp: CExp[]) =>
+                makeClassExp(map(makeVarDecl, fields), zipWith(makeBinding, map((b: [string, Sexp]) => b[0], methods), methodsExp)));
+
 /*
     ;; <prim-op>  ::= + | - | * | / | < | > | = | not | and | or | eq? | string=?
     ;;                  | cons | car | cdr | pair? | number? | list
@@ -220,7 +233,7 @@ const isPrimitiveOp = (x: string): boolean =>
         "number?", "boolean?", "symbol?", "string?"].includes(x);
 
 const isSpecialForm = (x: string): boolean =>
-    ["if", "lambda", "let", "quote"].includes(x);
+    ["if", "lambda", "let", "quote", "class"].includes(x);
 
 const parseAppExp = (op: Sexp, params: Sexp[]): Result<AppExp> =>
     bind(parseL3CExp(op), (rator: CExp) =>
